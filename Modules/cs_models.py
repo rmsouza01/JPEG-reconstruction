@@ -5,6 +5,7 @@ from keras.layers import Input, Conv2D, Lambda, Add, LeakyReLU, \
                          Multiply
 
 
+<<<<<<< HEAD
 def dct2d(im):
     return K.tf.transpose(K.tf.spectral.dct(K.tf.transpose(K.tf.spectral.dct(im,type=2,axis=-1,norm='ortho')),type=2,axis=-1,norm='ortho'))
     
@@ -33,6 +34,8 @@ def extract_patches_inverse(x, y):
     # otherwise they would simply sum up
     return K.tf.gradients(_y, _x, grad_ys=y)[0] / grad
 
+=======
+>>>>>>> 3c13ec7b2e8bb53c58c53d09bd529551940423bc
 
 def nrmse(y_true, y_pred):
     """
@@ -60,6 +63,7 @@ def nrmse_min_max(y_true, y_pred):
     /denom
 
 
+<<<<<<< HEAD
 def dct_layer(image):
     """
     Input: single channel array representing image domain data
@@ -85,6 +89,64 @@ def idct_layer(dctdata):
     
     return image
 
+=======
+def fft_layer(image):
+    """
+    Input: 2-channel array representing image domain complex data
+    Output: 2-channel array representing k-space complex data
+    """
+
+    # get real and imaginary portions
+    real = Lambda(lambda image: image[:, :, :, 0])(image)
+    imag = Lambda(lambda image: image[:, :, :, 1])(image)
+
+    image_complex = K.tf.complex(real, imag)  # Make complex-valued tensor
+    kspace_complex = K.tf.fft2d(image_complex)
+
+    # expand channels to tensorflow/keras format
+    real = K.tf.expand_dims(K.tf.real(kspace_complex), -1)
+    imag = K.tf.expand_dims(K.tf.imag(kspace_complex), -1)
+
+    # generate 2-channel representation of k-space
+    kspace = K.tf.concat([real, imag], -1)
+    return kspace
+
+
+def ifft_layer(kspace_2channel):
+    """
+    Input: 2-channel array representing k-space
+    Output: 2-channel array representing image domain
+    """
+    #get real and imaginary portions
+    real = Lambda(lambda kspace_2channel : kspace_2channel[:,:,:,0])(kspace_2channel)
+    imag = Lambda(lambda kspace_2channel : kspace_2channel[:,:,:,1])(kspace_2channel)
+    
+    kspace_complex = K.tf.complex(real,imag) # Make complex-valued tensor
+    image_complex = K.tf.ifft2d(kspace_complex)
+    
+    # expand channels to tensorflow/keras format
+    real = K.tf.expand_dims(K.tf.real(image_complex),-1)
+    imag = K.tf.expand_dims(K.tf.imag(image_complex),-1)
+    
+    # generate 2-channel representation of image domain
+    image_complex_2channel = K.tf.concat([real, imag], -1)
+    return image_complex_2channel
+
+
+def abs_layer(complex_data):
+    """
+    Input: 2-channel array representing complex data
+    Output: 1-channel array representing magnitude of complex data
+    """
+    #get real and imaginary portions
+    real = Lambda(lambda complex_data : complex_data[:,:,:,0])(complex_data)
+    imag = Lambda(lambda complex_data : complex_data[:,:,:,1])(complex_data)
+    
+    mag = K.tf.abs(K.tf.complex(real,imag))
+    mag = K.tf.expand_dims(mag, -1)
+    return mag
+    
+>>>>>>> 3c13ec7b2e8bb53c58c53d09bd529551940423bc
 
 def cnn_block(cnn_input, depth, nf, kshape):
     """
@@ -109,7 +171,11 @@ def unet_block(unet_input, kshape=(3, 3)):
     """
     :param unet_input: Input layer
     :param kshape: Kernel size
+<<<<<<< HEAD
     :return: single channel
+=======
+    :return: 2-channel, complex reconstruction
+>>>>>>> 3c13ec7b2e8bb53c58c53d09bd529551940423bc
     """
 
     conv1 = Conv2D(48, kshape, activation='relu', padding='same')(unet_input)
@@ -146,7 +212,11 @@ def unet_block(unet_input, kshape=(3, 3)):
     conv7 = Conv2D(48, kshape, activation='relu', padding='same')(conv7)
     conv7 = Conv2D(48, kshape, activation='relu', padding='same')(conv7)
 
+<<<<<<< HEAD
     conv8 = Conv2D(1, (1, 1), activation='linear')(conv7)
+=======
+    conv8 = Conv2D(2, (1, 1), activation='linear')(conv7)
+>>>>>>> 3c13ec7b2e8bb53c58c53d09bd529551940423bc
     out = Add()([conv8, unet_input])
     return out
 
@@ -169,17 +239,27 @@ def DC_block(rec,mask,sampled_kspace,kspace = False):
     return rec_kspace_dc
 
 
+<<<<<<< HEAD
 def deep_cascade_unet_no_dc(depth_str='di', H=256, W=256, kshape=(3, 3)):
     """
     :param depth_str: string that determines the depth of the cascade and the domain of each
     subnetwork
     :param H: Image height
+=======
+
+def deep_cascade_flat_unrolled(depth_str = 'ikikii', H=256,W=256,depth = 5,kshape = (3,3), nf = 48):
+    """
+    :param depth_str: string that determines the depth of the cascade and the domain of each
+    subnetwork
+    :param H: Image heigh
+>>>>>>> 3c13ec7b2e8bb53c58c53d09bd529551940423bc
     :param W: Image width
     :param kshape: Kernel size
     :param nf: number of filters in each convolutional layer
     :return: Deep Cascade Flat Unrolled model
     """
 
+<<<<<<< HEAD
     channels = 1  # inputs are represented as single channel images (grayscale)
     inputs = Input(shape=(H, W, channels))
     layers = [inputs]
@@ -215,5 +295,96 @@ def deep_cascade_unet_no_dc(depth_str='di', H=256, W=256, kshape=(3, 3)):
             # normalize idct image values at this step
 
     model = Model(inputs=inputs, outputs=layers[-1])
+=======
+    channels = 2 # inputs are represented as 2-channel images
+    inputs = Input(shape=(H,W,channels))
+    mask = Input(shape=(H,W,channels))
+    layers = [inputs]
+    
+    for ii in depth_str:
+        kspace_flag = True
+        if ii =='i':
+            # Add IFFT
+            layers.append(Lambda(ifft_layer)(layers[-1]))
+            kspace_flag = False
+        # Add CNN block
+        layers.append(cnn_block(layers[-1],depth,nf,kshape))
+
+        # Add DC block
+        layers.append(DC_block(layers[-1],mask,inputs,kspace=kspace_flag))
+
+    out = Lambda(ifft_layer)(layers[-1])
+    out2 = Lambda(abs_layer)(out)
+    model = Model(inputs=[inputs,mask], outputs=[out,out2])
+    return model
+
+
+def deep_cascade_unet(depth_str='ki', H=256, W=256, kshape=(3, 3)):
+    """
+    :param depth_str: string that determines the depth of the cascade and the domain of each
+    subnetwork
+    :param H: Image heigh
+    :param W: Image width
+    :param kshape: Kernel size
+    :param nf: number of filters in each convolutional layer
+    :return: Deep Cascade Flat Unrolled model
+    """
+
+    channels = 2  # inputs are represented as 2-channel images
+    inputs = Input(shape=(H, W, channels))
+    mask = Input(shape=(H, W, channels))
+    layers = [inputs]
+
+    for ii in depth_str:
+        kspace_flag = True
+        if ii == 'i':
+            # Add IFFT
+            layers.append(Lambda(ifft_layer)(layers[-1]))
+            kspace_flag = False
+        # Add CNN block
+        layers.append(unet_block(layers[-1], kshape))
+
+        # Add DC block
+        layers.append(DC_block(layers[-1], mask, inputs, kspace=kspace_flag))
+
+    out = Lambda(ifft_layer)(layers[-1])
+    out2 = Lambda(abs_layer)(out)
+    model = Model(inputs=[inputs,mask], outputs=[out, out2])
+    return model
+
+def deep_cascade_unet_no_dc(depth_str='ki', H=256, W=256, kshape=(3, 3)):
+    """
+    :param depth_str: string that determines the depth of the cascade and the domain of each
+    subnetwork
+    :param H: Image heigh
+    :param W: Image width
+    :param kshape: Kernel size
+    :param nf: number of filters in each convolutional layer
+    :return: Deep Cascade Flat Unrolled model
+    """
+
+    channels = 2  # inputs are represented as 2-channel images
+    inputs = Input(shape=(H, W, channels))
+    mask = Input(shape=(H, W, channels))
+    layers = [inputs]
+    kspace_flag = True
+        
+    for (jj,ii) in enumerate(depth_str):
+        if ii == 'i' and kspace_flag:
+            # Add IFFT
+            layers.append(Lambda(ifft_layer)(layers[-1]))
+            kspace_flag = False
+        elif ii == 'k' and not kspace_flag:
+            layers.append(Lambda(fft_layer)(layers[-1]))
+            kspace_flag = True
+        # Add CNN block
+        layers.append(unet_block(layers[-1], kshape))
+    
+    if  kspace_flag:
+        layers.append(Lambda(ifft_layer)(layers[-1]))
+            
+    out = Lambda(abs_layer)(layers[-1])
+    model = Model(inputs=inputs, outputs=out)
+>>>>>>> 3c13ec7b2e8bb53c58c53d09bd529551940423bc
     return model
 
