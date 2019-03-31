@@ -1,0 +1,6 @@
+jpeg2dct.egg-info/PKG-INFO
+jpeg2dct.egg-info/SOURCES.txt
+jpeg2dct.egg-info/dependency_links.txt
+jpeg2dct.egg-info/not-zip-safe
+jpeg2dct.egg-info/requires.txt
+jpeg2dct.egg-info/top_level.txt

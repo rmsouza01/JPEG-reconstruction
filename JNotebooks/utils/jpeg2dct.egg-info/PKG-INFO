@@ -1,0 +1,12 @@
+Metadata-Version: 1.0
+Name: jpeg2dct
+Version: 0.2.4
+Summary: Library providing a Python function and a TensorFlow Op to read JPEG image as a numpy 
+array or a Tensor containing DCT coefficients.
+Home-page: https://github.com/uber-research/jpeg2dct
+Author: Uber Technologies, Inc.
+Author-email: UNKNOWN
+License: UNKNOWN
+Description: jpeg2dct library provides native Python function and a TensorFlow Op to read JPEG image
+        as a numpy array or a Tensor containing DCT coefficients.
+Platform: UNKNOWN
