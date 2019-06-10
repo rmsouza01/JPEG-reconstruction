@@ -58,3 +58,42 @@ def idct_in_blocks(dct_mat, block_size = 8):
             im_matrix[i:i+block_size,j:j+block_size] = py_idct2d(block)
 
     return im_matrix
+
+
+def extract_image_patches(im, patch_size = 8):
+    
+    bat, rows, cols, chnl = im.shape
+    
+    patches = np.zeros((np.int(bat * rows / patch_size * cols / patch_size), patch_size, patch_size, chnl))
+    
+    m_n = rows / patch_size * cols / patch_size
+    m_i = cols / patch_size
+    
+    for cc in range(0, chnl):
+        for nn in range(0, bat):
+            for ii in range(0, rows, patch_size):
+                for jj in range(0, cols, patch_size):
+                    patch_num = np.int(m_n*nn + m_i*ii/patch_size + jj/patch_size)
+                    patches[patch_num, :, :, cc] = im[nn, ii:ii+patch_size, jj:jj+patch_size, cc]
+                    
+    return patches
+                
+    
+def compile_image_patches(patches, image_size = 256):
+    
+    pat, H, W, chnl = patches.shape
+    bat = np.int(pat * H / image_size * W / image_size)
+    
+    im = np.zeros((bat, image_size, image_size, chnl))
+    
+    m_n = image_size / H * image_size / W
+    m_i = image_size / W
+    
+    for cc in range(0, chnl):
+        for nn in range(0, bat):
+            for ii in range(0, image_size, H):
+                for jj in range(0, image_size, W):
+                    patch_num = np.int(m_n*nn + m_i*ii/W + jj/H)
+                    im[nn, ii:ii+W, jj:jj+H, cc] = patches[patch_num, :, :, cc]
+                        
+    return im

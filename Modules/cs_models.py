@@ -2,7 +2,7 @@ from keras import backend as K
 from keras.models import Model, Sequential
 from keras.layers import Input, Conv2D, Lambda, Add, Subtract, LeakyReLU, \
                          MaxPooling2D, concatenate, UpSampling2D,\
-                         Multiply
+                         Multiply, Dense, Flatten, Reshape
 
 
 def tf_dct2d(im):
@@ -123,6 +123,16 @@ def abs_layer(complex_data):
     return mag
 
 
+def concat_empty_channel(singl_chnl_data):
+    """
+    Input: 2-channel array representing complex data
+    Output: 1-channel array representing magnitude of complex data
+    """
+    #get real and imaginary portions
+    
+    return K.tf.concat([singl_chnl_data, K.tf.zeros(K.tf.shape(singl_chnl_data))], -1)
+
+
 def dct_layer(image):
     """
     Input: single channel array representing image domain data
@@ -145,6 +155,33 @@ def idct_layer(dctdata):
     patches = extract_patches(dctdata)
     image_patches = tf_idct2d(patches)
     image = extract_patches_inverse(dctdata, image_patches)
+    
+    return image
+
+
+def fc_dct_layer(image):
+    """
+    Input: single channel array representing image domain data
+    Output: single channel array representing dct coefficient data (in patches)
+    """
+    
+    patches = extract_patches(image)
+    dct_patches = tf_dct2d(patches)
+    
+    return dct_patches
+
+
+def fc_idct_layer(data_list):
+    """
+    Input: single channel array representing dct coefficient data (in patches)
+    Output: single channel array representing image domain data
+    
+    data_list: data_list[0] = dct matrix (in patches) [total_num_patches, patch_size, patch_size, chnl]
+               data_list[1] = single channel image in original dimensions [batch, H, W, chnl]
+    """
+    
+    image_patches = tf_idct2d(data_list[0])
+    image = extract_patches_inverse(data_list[1], image_patches)
     
     return image
 
@@ -191,6 +228,21 @@ def cnn_block(cnn_input, depth, nf, kshape):
     final_conv = Conv2D(2, (1, 1), activation='linear')(layers[-1])
     rec1 = Add()([final_conv,cnn_input])
     return rec1
+
+
+def dense_block(dense_input):
+    
+    inputs_flat = Flatten()(dense_input)
+    
+    dense1 = Dense(128, activation='relu')(inputs_flat)
+    dense2 = Dense(128, activation='relu')(dense1)
+    dense3 = Dense(64, activation='relu')(dense2)
+    dense4 = Dense(64, activation='relu')(dense3)
+
+    #output_layer = Reshape(8,8)(dense4)
+    output_layer = Reshape((8,8,1), input_shape=(64,))(dense4)
+    
+    return output_layer
 
 
 def unet_block(unet_input, kshape=(3, 3)):
@@ -425,7 +477,7 @@ def deep_cascade_unet_ksp_no_dc(depth_str='ki', H=256, W=256, kshape=(3, 3)):
             layers.append(Lambda(fft_layer)(layers[-1])) 
             print("Append FFT layer")
             kspace_flag = True
-        elif ii != 'd' and ii != 'i':
+        elif ii != 'k' and ii != 'i':
             print("Layer not recognized. Only 'k' and 'i' layers are currently supported.")
             break;
 
@@ -435,23 +487,137 @@ def deep_cascade_unet_ksp_no_dc(depth_str='ki', H=256, W=256, kshape=(3, 3)):
 
         if kspace_flag:
             if (jj + 1) % len(depth_str) > 0: # check if there is a next element
-                if depth_str[jj + 1] == 'd':
+                if depth_str[jj + 1] == 'k':
                     print("FFT layer again. Don't append iFFT layer.")
                 else:
                     layers.append(Lambda(ifft_layer)(layers[-1]))
                     layers.append(Lambda(abs_layer)(layers[-1]))
                     print("Append iFFT layer")
                     print("Append magnitude layer")
+                    layers.append(Lambda(concat_empty_channel)(layers[-1]))
                     kspace_flag = False
             else:
                 layers.append(Lambda(ifft_layer)(layers[-1]))
                 layers.append(Lambda(abs_layer)(layers[-1]))
                 print("Append iFFT layer")
                 print("Append magnitude layer")
+                layers.append(Lambda(concat_empty_channel)(layers[-1]))
                 kspace_flag = False
 
     model = Model(inputs=inputs, outputs=layers[-1])
     return model
+
+
+def dequantization_network():
+    
+    inputs = Input(shape=(8,8,1))
+    inputs_flat = Flatten()(inputs)
+    
+    dense1 = Dense(128, activation='relu')(inputs_flat)
+    dense2 = Dense(128, activation='relu')(dense1)
+    dense3 = Dense(64, activation='relu')(dense2)
+    dense4 = Dense(64, activation='relu')(dense3)
+
+    #output_layer = Reshape(8,8)(dense4)
+    output_layer = Reshape((8,8,1), input_shape=(64,))(dense4)
+    
+    model = Model(inputs=inputs, outputs=output_layer)
+    return model
+
+
+# NEED TO FIX:
+# Don't append iDCT layer for cases like 'ff'
+def deep_cascade_fc_unet(depth_str='fi', H=256, W=256, kshape=(3, 3)):
+    """
+    :param depth_str: string that determines the depth of the cascade and the domain of each
+    subnetwork
+    :param H: Image height
+    :param W: Image width
+    :param kshape: Kernel size
+    :param nf: number of filters in each convolutional layer
+    :return: Deep Cascade Flat Unrolled model
+    """
+
+    channels = 1  # inputs are represented as single channel images (grayscale)
+    inputs = Input(shape=(H, W, channels))
+    layers = [inputs]
+    fc_flag = False # flag whether input is in the image domain (false) or dct domain (true)
+                    # i.e. input is in image domain
+    
+    for (jj,ii) in enumerate(depth_str):
+        print(jj,ii)
+        if ii == 'f':
+            if not fc_flag: # image domain
+                layers.append(Lambda(fc_dct_layer)(layers[-1]))
+                print("Append DCT layer (patches)")
+                layers.append(dense_block(layers[-1]))
+                print("Append FC/dense block")
+                fc_flag = True
+            else: # DCT domain
+                layers.append(dense_block(layers[-1]))
+                print("Append FC/dense block")
+        elif ii == 'i':
+            if not fc_flag: # image domain
+                layers.append(unet_block(layers[-1], kshape))
+                print("Append U-net block")
+                fc_flag = False
+            else: # DCT domain
+                layers.append(Lambda(fc_idct_layer)([layers[-1], inputs])) 
+                print("Append iDCT layer (patches)")
+                layers.append(unet_block(layers[-1], kshape))
+                print("Append U-net block")
+                fc_flag = False
+        else:
+            print("Layer not recognized. Only 'f' and 'i' layers are currently supported.")
+            break;
+            
+        if not ((jj + 1) % len(depth_str) > 0) and ii == 'f' and fc_flag:
+            layers.append(Lambda(fc_idct_layer)([layers[-1], inputs])) 
+            print("Append iDCT layer (patches)")
+            
+
+#     for (jj,ii) in enumerate(depth_str):
+#         print(jj, ii)
+#         if ii == 'f' and not fc_flag:
+#             # Add a FC layer; Input should be in DCT domain
+#             layers.append(Lambda(fc_dct_layer)(layers[-1]))
+#             layers.append(dense_block(layers[-1])) 
+#             # layers.append(Lambda(dct_dc_layer)([layers[-1], inputs, qmat])) # data consistency layer
+#             # layers.append(Lambda(fc_idct_layer)([layers[-1], inputs]))
+#             print("Append DCT layer (patches)")
+#             print("Append FC/dense block")
+#             # print("Append data-consistency layer")
+#             # print("Append iDCT layer (patches)")
+#             fc_flag = True
+#         elif ii == 'i':
+#             # Add CNN block
+#             if fc_flag:
+#                 layers.append(Lambda(fc_idct_layer)([layers[-1], inputs]))
+#             layers.append(unet_block(layers[-1], kshape))
+#             print("Append iDCT layer (patches)")
+#             print("Append U-net block")
+#             fc_flag = False
+#         elif ii != 'f' and ii != 'i':
+#             print("Layer not recognized. Only 'f' and 'i' layers are currently supported.")
+#             break;
+
+#         if fc_flag:
+#             if (jj + 1) % len(depth_str) > 0: # check if there is a next element
+#                 if depth_str[jj + 1] == 'f':
+#                     print("FC block again. Don't append iDCT layer.")
+# #                 else:
+# #                     layers.append(Lambda(fc_idct_layer)([layers[-1], inputs])) 
+# #                     print("Append iDCT layer (patches)")
+# #                     fc_flag = False
+#             else:
+#                 layers.append(Lambda(fc_idct_layer)([layers[-1], inputs])) 
+#                 print("Append iDCT layer (patches)")
+#                 fc_flag = False
+#             # normalize idct image values at this step
+
+    model = Model(inputs=inputs, outputs=layers[-1])
+    return model
+    
 
 
 ##############################################################################################################
