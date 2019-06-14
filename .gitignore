@@ -1,5 +1,1 @@
-*~
-*.pyc
-Models
-*.DS_Store
-*.idea*
+!Models
