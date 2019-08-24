@@ -22,4 +22,5 @@ JPEG decompression performance was evaluated by structural similarity (SSIM), pe
 
 ## References
 [1] R. Souza, R. M. Lebel, and R. Frayne, “A hybrid, dual domain, cascade of convolutional neural networks for magnetic resonance image reconstruction,” in International Conference on Medical Imaging with Deep Learning – Full Paper Track, London, United Kingdom, 08–10 Jul 2019. [Online]. Available: https://openreview.net/forum?id=HJeJx4XxlN
+
 [2] B. Zhu, J. Z. Liu, S. F. Cauley, B. R. Rosen, and M. S. Rosen, “Image reconstruction by domain-transform manifold learning,” Nature, 2018.
