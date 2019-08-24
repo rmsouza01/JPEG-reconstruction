@@ -293,88 +293,6 @@ def residual_wnet_id_dc(H=256, W=256, kshape=(3, 3), channels=1):
     return model
 
 
-# def fcu_di_dc(H=256,W=256,kshape=(3,3),chnl=1):
-#
-#     channels = 1
-#     inputs = Input(shape=(H,W,channels))
-#     qmat = Input(shape=(H,W,channels))
-#
-#     dct_inputs = Lambda(dct_layer)(inputs)
-#
-#     layers = [inputs]
-#
-#     print("Append DCT layer (patches)")
-#     layers.append(Lambda(fc_dct_layer)(layers[-1]))
-#     print("Append FC/dense block")
-#     layers.append(dense_block(layers[-1]))
-#     predc_layer1 = Lambda(extract_patches_inv)([inputs, layers[-1]])
-#     layers.append(predc_layer1)
-#     print("Append data consistency")
-#     dc_layer1 = Lambda(dct_dc_layer)([predc_layer1, dct_inputs, qmat])
-#     layers.append(dc_layer1)
-#     print("Append iDCT layer")
-#     intermed = Lambda(idct_layer)(layers[-1])
-#     layers.append(intermed)
-#
-#     print("Append U-net block")
-#     layers.append(unet_block(layers[-1], kshape))
-#     print("Append DCT layer")
-#     predc_layer2 = Lambda(dct_layer)(layers[-1])
-#     layers.append(predc_layer2)
-#     print("Append data consistency")
-#     dc_layer2 = Lambda(dct_dc_layer)([predc_layer2, dct_inputs, qmat])
-#     layers.append(dc_layer2)
-#     print("Append iDCT layer")
-#     layers.append(Lambda(idct_layer)(dc_layer2))
-#
-#     dc1 = Lambda(keras_mse)([dc_layer1, predc_layer1])
-#     dc2 = Lambda(keras_mse)([dc_layer2, predc_layer2])
-#
-#     model = Model(inputs=[inputs,qmat], outputs=[layers[-1],intermed,dc1,dc2])
-#     return model
-#
-#
-# def fcu_id_dc(H=256,W=256,kshape=(3,3),chnl=1):
-#
-#     channels = 1
-#     inputs = Input(shape=(H,W,channels))
-#     qmat = Input(shape=(H,W,channels))
-#
-#     dct_inputs = Lambda(dct_layer)(inputs)
-#
-#     layers = [inputs]
-#
-#     print("Append U-net block")
-#     layers.append(unet_block(layers[-1], kshape))
-#     print("Append DCT layer")
-#     predc_layer1 = Lambda(dct_layer)(layers[-1])
-#     layers.append(predc_layer1)
-#     print("Append data consistency")
-#     dc_layer1 = Lambda(dct_dc_layer)([predc_layer1, dct_inputs, qmat])
-#     layers.append(dc_layer1)
-#     print("Append iDCT layer")
-#     intermed = Lambda(idct_layer)(dc_layer1)
-#     layers.append(intermed)
-#
-#     print("Append DCT layer (patches)")
-#     layers.append(Lambda(fc_dct_layer)(layers[-1]))
-#     print("Append FC/dense block")
-#     layers.append(dense_block(layers[-1]))
-#     predc_layer2 = Lambda(extract_patches_inv)([inputs, layers[-1]])
-#     layers.append(predc_layer2)
-#     print("Append data consistency")
-#     dc_layer2 = Lambda(dct_dc_layer)([predc_layer2, dct_inputs, qmat])
-#     layers.append(dc_layer2)
-#     print("Append iDCT layer")
-#     layers.append(Lambda(idct_layer)(layers[-1]))
-#
-#     dc1 = Lambda(keras_mse)([dc_layer1, predc_layer1])
-#     dc2 = Lambda(keras_mse)([dc_layer2, predc_layer2])
-#
-#     model = Model(inputs=[inputs,qmat], outputs=[layers[-1],intermed,dc1,dc2])
-#     return model
-#
-#
 def deep_cascade_unet(depth_str='di', H=256, W=256, kshape=(3, 3), useDC = False):
     """
     :param depth_str: string that determines the depth of the cascade and the domain of each
@@ -460,18 +378,6 @@ def deep_cascade_unet(depth_str='di', H=256, W=256, kshape=(3, 3), useDC = False
 
 def fcu_di_dc(H=256,W=256,kshape=(3,3),chnl=1):
 
-#     channels = 1
-#     inputs = Input(shape=(H,W,channels))
-#     qmat = Inputs(shape=(H,W,channels))
-
-#     dct_inputs = Lambda(dct_layer)(inputs)
-#     layers = [inputs]
-
-#     print("Append DCT layer (patches)")
-#     layers.append(Lambda(fc_dct_layer)(layers[-1]))
-#     print("Append FC/dense block")
-#     layers.append(dense_block(layers[-1]))
-
     channels = 1
     inputs = Input(shape=(H,W,channels))
     qmat = Input(shape=(H,W,channels))
@@ -512,18 +418,6 @@ def fcu_di_dc(H=256,W=256,kshape=(3,3),chnl=1):
 
 
 def fcu_id_dc(H=256,W=256,kshape=(3,3),chnl=1):
-
-#     channels = 1
-#     inputs = Input(shape=(H,W,channels))
-#     qmat = Inputs(shape=(H,W,channels))
-
-#     dct_inputs = Lambda(dct_layer)(inputs)
-#     layers = [inputs]
-
-#     print("Append DCT layer (patches)")
-#     layers.append(Lambda(fc_dct_layer)(layers[-1]))
-#     print("Append FC/dense block")
-#     layers.append(dense_block(layers[-1]))
 
     channels = 1
     inputs = Input(shape=(H,W,channels))
