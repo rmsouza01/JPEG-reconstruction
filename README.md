@@ -18,7 +18,7 @@ DI = DCT-Image domain network (i.e. DCT-domain first); ID = Image-DCT domain net
 ![Sample decompressions using the proposed deep learning networks on natural images](./Figures/natural_images.png?raw=True)
 ![Sample decompressions using the proposed deep learning networks on brain MR images](./Figures/brain_images.png?raw=True)
 
-JPEG decompression performance was evaluated by structural similarity (SSIM), peak signal-to-noise ratio (PSNR), and normalized root mean squared error (NRMSE).
+JPEG decompression performance was evaluated by structural similarity (SSIM), peak signal-to-noise ratio (PSNR), and normalized root mean squared error (NRMSE). The ground-truth reference was the uncompressed image when computing performance metrics.
 
 ## References
 [1] R. Souza, R. M. Lebel, and R. Frayne, “A hybrid, dual domain, cascade of convolutional neural networks for magnetic resonance image reconstruction,” in International Conference on Medical Imaging with Deep Learning – Full Paper Track, London, United Kingdom, 08–10 Jul 2019. [Online]. Available: https://openreview.net/forum?id=HJeJx4XxlN
